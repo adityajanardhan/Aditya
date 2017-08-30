@@ -1,0 +1,625 @@
+/*read dataset with guessingrows*/;
+proc import datafile="Z:\Assignments\Graded Assignment\Topic 13 - Final Case Study Implementation\telecomfinal.csv"
+dbms=csv replace out=telecom;
+guessingrows =67000;
+
+/*/*check data-types*/*/
+/*proc contents data=telecom;*/
+/*convert data-types*/; 
+data telecom;
+set telecom;
+age_1=input(age1,best3.);
+age_2=input(age2,best3.);
+avg6mous=input(avg6mou,best5.);
+avg6qtys=input(avg6qty,best5.);
+change_mous=input(change_mou, best10.);
+da_means=input(da_mean,best7.);
+da_ranges=input(da_range,best7.);
+datovr_means=input(datovr_mean,best7.);
+datovr_ranges=input(datovr_range,best7.);
+eqpday=input(eqpdays,best7.);
+forgntvls=input(forgntvl,best7.);
+hnd_prices=input(hnd_price,best7.);
+incomes=input(income,best7.);
+model=input(models,best7.);
+mou_means=input(mou_mean,best7.);
+mou_ranges=input(mou_range,best7.);
+mtrcycles=input(mtrcycle,best7.);
+numbcar=input(numbcars,best7.);
+ovrmou_means=input(ovrmou_mean,best7.);
+ovrrev_means=input(ovrrev_mean,best7.);
+retday=input(retdays,best7.);
+rev_means=input(rev_mean,best7.);
+rev_ranges=input(rev_range,best7.);
+roam_means=input(roam_mean,best7.);
+totmrc_means=input(totmrc_Mean,best7.);
+trucks=input(truck,best7.);
+
+/*remove duplicate variable names*/
+data telecom();
+set telecom;
+drop age1 age2 avg6mou avg6qty change_mou da_mean da_range datovr_mean datovr_range
+eqpdays forgntvl hnd_price income models mou_mean mou_range mtrcycle numbcars 
+ovrmou_mean ovrrev_mean retdays rev_mean rev_range roam_mean totmrc_mean truck;
+
+/* ****************REMOVE AND IMPUTE NULLS FROM NUMERICS VARIABLES********************/
+/*remove age1 age2 mtrcycles as they have a lot of missing*/
+data telecom(drop = age_1 age_2 mtrcycles);
+set telecom;
+
+/*remove null values */
+data telecom;
+set telecom;
+if da_means = . or forgntvls = . or trucks=. or change_mous = . or eqpday= . 
+or model= . then delete;
+
+
+/*remove nulls from avg6mous as these customers are less than 6 months old*/
+data telecom;
+set telecom;
+if avg6mous = . then delete;
+
+/*impute hnd_prices with relation to hnd_webcap and refurb_new */
+/*proc tabulate data=telecom;*/
+/*var hnd_prices;*/
+/*class hnd_webcap refurb_new ;*/
+/*table refurb_new*hnd_prices*hnd_webcap*mean ;*/
+
+data telecom;
+set telecom;
+if hnd_webcap = "UNKW" then delete;
+if hnd_prices = . and hnd_webcap="WC" and refurb_new = "N" then hnd_prices=36;
+if hnd_prices = . and hnd_webcap="WC" and refurb_new = "R" then hnd_prices=15.61;
+if hnd_prices = . and hnd_webcap="WCMB" and refurb_new = "N" then hnd_prices=132;
+if hnd_prices = . and hnd_webcap="WCMB" and refurb_new = "R" then hnd_prices=80.45;
+
+/*make bins of retdays*/
+data telecom;
+set telecom;
+if 0 le retday le 15 then ret15=1; else ret15=0;
+if 16 le retday le 30 then ret30=1; else ret30=0;
+if 31 le retday le 45 then ret45=1; else ret45=0;
+if 46 le retday le 60 then ret60=1; else ret60=0;
+
+/*make a variable for quality,billing adjustment, overage and churn_home */
+data telecom;
+set telecom;
+drop_block = drop_blk_mean*months/totcalls;
+adjust= (totrev-adjrev)/totrev;
+overage = ovrrev_means/rev_means;
+churn_home= (uniqsubs-actvsubs)/uniqsubs;
+
+/* ****************REMOVE OUTLIERS FROM NUMERICS VARIABLES********************/
+/**/
+/*proc univariate data=telecom;*/
+
+
+data telecom(drop = retday numbcar incomes );
+set telecom;
+if drop_blk_mean>150 then delete;
+if drop_vce_range>175 then delete;
+if owylis_vce_Range>450 then delete;
+if mou_opkv_Range>3000 then delete;
+if totcalls> 90000 or totcalls=0 then delete;
+if custcare_mean>100 then delete;
+if callwait_mean>170 then delete;
+if iwylis_vce_Mean>300 then delete;
+if callwait_range>100 then delete;
+if ccrndmou_Range>400 then delete;
+if adjqty>80000 or adjqty=0 then delete;
+if comp_vce_mean > 1500 or comp_vce_mean=0 then delete;
+if plcd_vce_mean>2000 or plcd_vce_mean=0 then delete;
+if avg3mou>5000 or avg3mou=0 then delete;
+if avgmou>4000 or avgmou=0 then delete;
+if avg3qty>2500 or avg3qty=0 then delete;
+if avgqty>2000 OR avgqty=0 then delete;
+if actvsubs=0 then delete;
+if opk_dat_mean>200 then delete;
+if recv_sms_mean>100 then delete;
+if blck_dat_mean>100 then delete;
+if mou_pead_mean>300 then delete;
+if drop_dat_mean>100 then delete;
+if drop_vce_mean>200 then delete;
+if adjmou>16000 or adjmou=0 then delete;
+if totrev>15000 or totrev=0 then delete;
+if adjrev>15000 or adjrev=0 then delete;
+if avgrev>700 or avgrev=0 then delete; 
+if avg6mous>3000 or avg6mous=0 then delete;
+if avg6qtys> 2500 or avg6qtys=0 then delete;
+if change_mous <=-2000 or change_mous>= 3000 then delete;
+if da_means>100 then delete;
+if eqpday<=0 then delete;
+if mou_means>6000 or mou_means=0 then delete;
+if mou_ranges>15000 then delete;
+if ovrmou_means>3000  then delete;
+if ovrrev_means> 800 then delete;
+if rev_means<=0 or rev_means>1000 then delete;
+if roam_means>1000 then delete;
+if totmrc_means<0 then delete;
+
+/* ****************REMOVE AND IMPUTE NULLS FROM Categorical VARIABLES********************/
+/*impute values of hnd_webcap using hnd_prices*/
+/*proc tabulate data=telecom;*/
+/*var hnd_prices;*/
+/*class hnd_webcap refurb_new ;*/
+/*table refurb_new*hnd_prices*hnd_webcap*mean ;*/;
+
+data telecom;
+set telecom;
+if hnd_webcap="NA" and refurb_new = "R" and 5 le hnd_prices le 25  then hnd_webcap="WC" ;
+if hnd_webcap="NA" and refurb_new = "N" and 25 le hnd_prices le 55 then hnd_webcap="WC"; 
+if hnd_webcap="NA" and refurb_new = "R" and 55 le hnd_prices le 105 then hnd_webcap="WCMB" ;
+if hnd_webcap="NA" and refurb_new = "N" and 105 le hnd_prices then hnd_webcap="WCMB"; 
+
+/*remove missing*/
+data telecom;
+set telecom;
+if area= "NA" or hnd_webcap="NA" or prizm_social_one="NA" then delete;
+
+/********************CONVERT CAT VARIABLES INTO BINARY VARIABLES************************/
+
+data telecom(drop=area csa asl_flag children crclscod ethnic hnd_webcap refurb_new marital 
+prizm_social_one car_buy cartype div_type dwllsize dwlltype proptype mailordr 
+mailresp occu1 solflag wrkwoman);
+set telecom;
+
+if area ="ATLANTIC SOUTH AREA" then atlsou=1; else atlsou=0;
+if area ="CALIFORNIA NORTH AREA" then calinor=1; else calinor=0;
+if area ="CENTRAL/SOUTH TEXAS AREA" then censoutx=1; else censoutx=0;
+if area ="CHICAGO AREA" then chic=1; else chic=0;
+if area ="DALLAS AREA" then dlls=1; else dlls=0;
+if area ="DC/MARYLAND/VIRGINIA AREA" then dcmryvrgn=1; else dcmryvrgn=0;
+if area ="GREAT LAKES AREA" then grtlks=1; else grtlks=0;
+if area ="HOUSTON AREA" then hous=1; else hous=0;
+if area ="LOS ANGELES AREA" then la=1; else la=0;
+if area ="MIDWEST AREA" then midwest=1; else midwest=0;
+if area ="NEW ENGLAND AREA" then neweng=1; else neweng=0;
+if area ="NORTH FLORIDA AREA" then norflo=1; else norflo=0;
+if area ="NORTHWEST/ROCKY MOUNTAIN AREA" then nwrckymt=1; else nwrckymt=0;
+if area ="OHIO AREA" then ohio=1; else ohio=0;
+if area ="PHILADELPHIA AREA" then phil=1; else phil=0;
+if area ="SOUTH FLORIDA AREA" then souflo=1; else souflo=0;
+if area ="SOUTHWEST AREA" then souwest=1; else souwest=0;
+if area ="TENNESSEE AREA" then tnnss=1; else tnnss=0;
+
+if asl_flag="Y" then asl=1; else asl=0;
+
+if crclscod="A" then A=1;else A=0;
+if crclscod="A2" then A2=1;else A2=0;
+if crclscod="B" then B=1;else B=0;
+if crclscod="B2" then B2=1;else B2=0;
+if crclscod="BA" then BA=1;else BA=0;
+if crclscod="C" then C=1;else C=0;
+if crclscod="C2" then C2=1;else C2=0;
+if crclscod="C5" then C5=1;else C5=0;
+if crclscod="CA" then CA=1;else CA=0;
+if crclscod="CY" then CY=1;else CY=0;
+if crclscod="D" then D=1;else D=0;
+if crclscod="D4" then D4=1;else D4=0;
+if crclscod="D5" then D5=1;else D5=0;
+if crclscod="DA" then DA=1;else DA=0;
+if crclscod="E" then E=1;else E=0;
+if crclscod="E4" then E4=1;else E4=0;
+if crclscod="EA" then EA=1;else EA=0;
+if crclscod="EF" then EF=1;else EF=0;
+if crclscod="EM" then EM=1;else EM=0;
+if crclscod="G" then G=1;else G=0;
+if crclscod="GA" then GA=1;else GA=0;
+if crclscod="I" then I=1;else I=0;
+if crclscod="JF" then JF=1;else JF=0;
+if crclscod="M" then M=1;else M=0;
+if crclscod="U" then U=1;else U=0;
+if crclscod="U1" then U1=1;else U1=0;
+if crclscod="V1" then V1=1;else V1=0;
+if crclscod="W" then W=1;else W=0;
+if crclscod="Z" then Z=1;else Z=0;
+if crclscod="Z4" then Z4=1;else Z4=0;
+if crclscod="Z5" then Z5=1;else Z5=0;
+if crclscod="ZA" then ZA=1;else ZA=0;
+if crclscod="ZY" then ZY=1;else ZY=0;
+if crclscod="J" or crclscod="K" or crclscod="Z1" or crclscod="H" or crclscod="Y" 
+or crclscod="Z2" or crclscod="D2" or crclscod="A3" or crclscod="EF" or crclscod="IF" 
+or crclscod="L"or crclscod="P1" or crclscod="TP" or crclscod="O" or crclscod="E2" or 
+crclscod="CC" or crclscod="GY" or crclscod="EC" then oth=1;else oth=0;
+
+if ethnic="B" then eth_B=1;else eth_B=0;
+if ethnic="C" then eth_C=1;else eth_C=0;
+if ethnic="D" then eth_D=1;else eth_D=0;
+if ethnic="F" then eth_F=1;else eth_F=0;
+if ethnic="G" then eth_G=1;else eth_G=0;
+if ethnic="H" then eth_H=1;else eth_H=0;
+if ethnic="I" then eth_I=1;else eth_I=0;
+if ethnic="J" then eth_J=1;else eth_J=0;
+if ethnic="M" then eth_M=1;else eth_M=0;
+if ethnic="O" then eth_O=1;else eth_O=0;
+if ethnic="P" then eth_P=1;else eth_P=0;
+if ethnic="R" then eth_R=1;else eth_R=0;
+if ethnic="S" then eth_S=1;else eth_S=0;
+if ethnic="U" then eth_U=1;else eth_U=0;
+if ethnic="X" then eth_X=1;else eth_X=0;
+if ethnic="Z" then eth_Z=1;else eth_Z=0;
+
+if hnd_webcap ="WC" then wc=1; else wc=0;
+
+if marital ="A" then mar_A=1; else mar_A=0;
+if marital ="B" then mar_B=1; else mar_B=0;
+if marital ="M" then mar_M=1; else mar_M=0;
+if marital ="S" then mar_S=1; else mar_S=0;
+
+if prizm_social_one="C" then priz_C=1; else priz_C=0;
+if prizm_social_one="R" then priz_R=1; else priz_R=0;
+if prizm_social_one="T" then priz_T=1; else priz_T=0;
+if prizm_social_one="U" then priz_U=1; else priz_U=0;
+
+if refurb_new ="R" then ref=1; else ref=0;
+
+proc means n nmiss data=telecom;
+/*check vif*/
+/**/
+/*proc reg  data=telecom ;*/
+/*model churn = */
+/*A	A2	B	B2	BA	C	C2	C5	CA	CY	D	D4	D5	DA	E	E4	EA	EF	EM	G	GA	I	JF	M	U	U1	V1	W	Z	Z4	Z5	ZA	ZY	actvsubs	adjust	asl	atlsou	avgrev	blck_dat_Mean	calinor	callwait_Mean	callwait_Range	ccrndmou_Range	censoutx	change_mous	chic	churn_home	custcare_Mean	da_means	da_ranges	datovr_ranges	dcmryvrgn	dlls	drop_blk_Mean	drop_block	drop_dat_Mean	drop_vce_Mean	drop_vce_Range	eqpday	eth_B	eth_C	eth_D	eth_F	eth_G	eth_H	eth_I	eth_J	eth_M	eth_O	eth_P	eth_R	eth_S	eth_U	eth_X	eth_Z	forgntvls	grtlks	hnd_prices	hous	iwylis_vce_Mean	la	mar_A	mar_B	mar_M	mar_S	midwest	model	months	mou_opkv_Range	mou_pead_Mean	mou_ranges	neweng	norflo	nwrckymt	ohio	opk_dat_Mean	oth	overage	ovrmou_means 	owylis_vce_Range	phil	plcd_vce_Mean	priz_C	priz_R	priz_T	priz_U	recv_sms_Mean	ref	ret15	ret30	ret45	ret60	rev_ranges	roam_means	souflo	souwest	tnnss	totcalls	totmrc_means	trucks	wc*/
+/*/vif;*/
+
+/*remove vif>=5 variables*/;
+data telecom(keep= A	A2	B	B2	BA	C	C2	C5	CA	CY	D	D4	D5	DA	E	E4	EA	EF	EM	G	GA	I	
+JF	M	U	U1	V1	W	Z	Z4	Z5	ZA	ZY	adjust	asl	atlsou	avg6mous avgrev	
+blck_dat_Mean	calinor	callwait_Mean	callwait_Range	ccrndmou_Range	censoutx 
+change_mous	chic	churn_home	custcare_Mean	da_means	da_ranges	datovr_ranges	
+dcmryvrgn	dlls	drop_blk_Mean	drop_block	drop_dat_Mean	drop_vce_Mean	
+drop_vce_Range	eqpday	eth_B	eth_C	eth_D	eth_F	eth_G	eth_H	eth_I	
+eth_J	eth_M	eth_O	eth_P	eth_R	eth_S	eth_U	eth_X	eth_Z	forgntvls	
+grtlks	hnd_prices	hous	iwylis_vce_Mean	la	mar_A	mar_B	mar_M	mar_S	
+midwest	model	months	mou_opkv_Range	mou_pead_Mean	mou_ranges	neweng	norflo	
+nwrckymt	ohio	opk_dat_Mean	oth	overage	ovrmou_means	owylis_vce_Range	
+phil	priz_C	priz_R	priz_T	priz_U	recv_sms_Mean	ref	ret15	ret30	ret45	
+ret60	rev_ranges	roam_means	souflo	souwest	tnnss	totcalls	totmrc_means	
+trucks	wc churn customer_id);
+set telecom;
+
+proc logistic data=telecom descending;
+model churn = drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	
+avg6mous--ref/selection=backward;
+
+/*keep few variables for clustering in a new dataset*/
+data telecom_new;
+set telecom;
+keep customer_id overage drop_block adjust churn churn_home totmrc_means ;
+
+
+/*scaling*/
+proc standard data=telecom_new out=telecom_new mean=0 std=1 ;
+var overage drop_block adjust totmrc_means churn churn_home;
+
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 4 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=8390 ccc=74.49*/*/
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 5 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=8883 ccc=100.85*/*/
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 6 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=7525 ccc=26.72*/*/
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 7 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=8398 ccc=68.43*/
+
+/*optimal clustering*/
+proc fastclus data=telecom_new out=telecom_new maxclusters= 8 converge=0 maxiter=500;
+var overage drop_block adjust totmrc_means churn churn_home; /*f=10416 ccc=205.32*/
+
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 9 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=9495 ccc=184*/*/
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 10 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=9333 ccc=199*/*/
+/*proc fastclus data=telecom_new out=telecom_new maxclusters= 11 converge=0 maxiter=500;*/
+/*var overage drop_block adjust totmrc_means churn churn_home; /*f=8673 ccc=185*/
+
+data telecom_new(keep=customer_id cluster);
+set telecom_new;
+
+proc sort data=telecom;
+by customer_id;
+proc sort data=telecom_new;
+by customer_id;
+
+data telecom;
+merge telecom(in=a1) telecom_new(in=b1);
+by customer_id;
+if a1 and b1;
+
+proc sort data=telecom;by cluster;
+proc export data=telecom outfile="Y:\Capstone Project\telecom_cluster.csv"
+dbms=csv replace;
+
+/*proc means mean  std data=telecom;var churn overage drop_block adjust totmrc_means churn_home;class cluster;*/
+/*by cluster;*/
+/*proc means mean data=telecom; var churn; class cluster;*/
+
+data cluster1; set telecom; if cluster=1;
+data cluster2; set telecom; if cluster=2;
+data cluster3; set telecom; if cluster=3;
+data cluster4; set telecom; if cluster=4;
+data cluster5; set telecom; if cluster=5;
+data cluster6; set telecom; if cluster=6;
+data cluster7; set telecom; if cluster=7;
+data cluster8; set telecom; if cluster=8;
+
+data cluster17;
+set cluster1 cluster7;
+
+data cluster28;
+set cluster2 cluster8;
+/*********************************CLUSTER17******************************************/
+data cluster17_test cluster17_train;
+set cluster17;
+if ranuni(1000)>0.7 then output cluster17_test;
+else output cluster17_train;
+
+proc logistic data=cluster17_train descending outmodel=c17_train_out;
+model churn=avg6mous callwait_Mean drop_block eqpday eth_F eth_O eth_Z
+hnd_prices norflo ovrmou_means rev_ranges roam_means/ctable lackfit;
+score out= c17_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c17_train_score out=c17_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c17_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c17_train_decile outfile="Y:\Capstone Project\c17_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c17_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c17_train_out;
+score data=cluster17_test out =c17_test_score;
+
+proc rank data=c17_test_score out = c17_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c17_test_decile;
+by descending p_1;
+
+proc export data=c17_test_decile outfile="Y:\Capstone Project\c17_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c17_test_decile;
+tables decile;
+
+/*********************************CLUSTER28******************************************/
+data cluster28_test cluster28_train;
+set cluster28;
+if ranuni(1000)>0.7 then output cluster28_test;
+else output cluster28_train;
+
+proc logistic data=cluster28_train descending /*outmodel=c28_train_out*/;
+model churn= drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	avg6mous--ref
+/selection=backward;
+
+score out= c28_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c28_train_score out=c28_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c28_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c28_train_decile outfile="Y:\Capstone Project\c28_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c28_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c28_train_out;
+score data=cluster28_test out =c28_test_score;
+
+proc rank data=c28_test_score out = c28_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c28_test_decile;
+by descending p_1;
+
+proc export data=c28_test_decile outfile="Y:\Capstone Project\c28_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c28_test_decile;
+tables decile;
+
+/*********************************CLUSTER3******************************************/
+data cluster3_test cluster3_train;
+set cluster3;
+if ranuni(1000)>0.7 then output cluster3_test;
+else output cluster3_train;
+
+/*proc logistic data=cluster3_train descending /*outmodel=c3_train_out*/;*/
+/*model churn= drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	avg6mous--ref*/
+/*/selection=backward;*/;
+
+proc logistic data=cluster3_train descending outmodel=c3_train_out;
+model churn= months	totcalls	avg6mous	change_mous	da_means	eqpday	forgntvls
+adjust	overage	churn_home	souwest	asl	A	EA	eth_O	wc	ref
+/ctable lackfit; score out= c3_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c3_train_score out=c3_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c3_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c3_train_decile outfile="Y:\Capstone Project\c3_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c3_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c3_train_out;
+score data=cluster3_test out =c3_test_score;
+
+proc rank data=c3_test_score out = c3_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c3_test_decile;
+by descending p_1;
+
+proc export data=c3_test_decile outfile="Y:\Capstone Project\c3_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c3_test_decile;
+tables decile;
+/*********************************CLUSTER4******************************************/
+data cluster4_test cluster4_train;
+set cluster4;
+if ranuni(1000)>0.7 then output cluster4_test;
+else output cluster4_train;
+
+/*proc logistic data=cluster4_train descending /*outmodel=c4_train_out*/;*/
+/*model churn= drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	avg6mous--ref*/
+/*selection=backward;*/;
+
+proc logistic data=cluster4_train descending outmodel=c4_train_out;
+model churn= months		avg6mous	rev_ranges	overage	calinor	souflo	asl	EA
+	V1	oth	eth_Z	wc	priz_R /ctable lackfit; score out= c4_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c4_train_score out=c4_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c4_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c4_train_decile outfile="Y:\Capstone Project\c4_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c4_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c4_train_out;
+score data=cluster4_test out =c4_test_score;
+
+proc rank data=c4_test_score out = c4_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c4_test_decile;
+by descending p_1;
+
+proc export data=c4_test_decile outfile="Y:\Capstone Project\c4_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c4_test_decile;
+tables decile;
+/*********************************CLUSTER5******************************************/
+data cluster5_test cluster5_train;
+set cluster5;
+if ranuni(1000)>0.7 then output cluster5_test;
+else output cluster5_train;
+
+proc logistic data=cluster5_train descending /*outmodel=c5_train_out*/;
+model churn= drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	avg6mous--ref
+/selection=backwaRD;
+
+proc logistic data=cluster5_train descending outmodel=c5_train_out;
+model churn=drop_blk_Mean	ccrndmou_Range	recv_sms_Mean	drop_vce_Mean	avgrev	
+change_mous	totmrc_means	ret60	overage	B
+/ctable lackfit; score out= c5_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c5_train_score out=c5_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c5_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c5_train_decile outfile="Y:\Capstone Project\c5_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c5_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c5_train_out;
+score data=cluster5_test out =c5_test_score;
+
+proc rank data=c5_test_score out = c5_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c5_test_decile;
+by descending p_1;
+
+proc export data=c5_test_decile outfile="Y:\Capstone Project\c5_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c5_test_decile;
+tables decile;
+
+/*********************************CLUSTER6******************************************/
+data cluster6_test cluster6_train;
+set cluster6;
+if ranuni(1000)>0.7 then output cluster6_test;
+else output cluster6_train;
+
+proc logistic data=cluster6_train descending /*outmodel=c6_train_out*/;
+model churn= drop_blk_Mean--mou_pead_mean drop_dat_Mean--avgrev	avg6mous--ref
+/selection=backward;
+
+proc logistic data=cluster6_train descending outmodel=c6_train_out;
+model churn= mou_opkv_Range	eqpday	hnd_prices	totmrc_means	trucks	drop_block
+adjust	nwrckymt	asl	B	eth_D	eth_I	eth_R	mar_M/ctable lackfit;
+score out= c6_train_score;
+
+/*RANKING OF THE MODEL*/
+proc rank data= c6_train_score out=c6_train_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+/*SORT THE ROWS IN DECS ORDER OF PREDICTED PROB*/
+proc sort data=c6_train_decile;
+by descending p_1;
+
+/*SAVE OUTPUT TO FILE*/
+proc export data=c6_train_decile outfile="Y:\Capstone Project\c6_train_decile.csv"
+dbms=csv replace;
+
+proc freq data=c6_train_decile;
+tables decile;
+
+/*WORKING ON TEST DATASET*/
+proc logistic inmodel=c6_train_out;
+score data=cluster6_test out =c6_test_score;
+
+proc rank data=c6_test_score out = c6_test_decile groups=10 ties=mean;
+var p_1;
+ranks decile;
+
+proc sort data=c6_test_decile;
+by descending p_1;
+
+proc export data=c6_test_decile outfile="Y:\Capstone Project\c6_test_decile.csv"
+dbms=csv replace;
+
+proc freq data=c6_test_decile;
+tables decile;
