@@ -1,0 +1,121 @@
+##In this code I will download a webpage of Forbes website "The World's Most Powerful Brands" 
+##from the link https://www.forbes.com/powerful-brands/list/ and try to understand the 
+##Revenue V/S Advertising of the powerful brands Industry Wise
+
+##Loading library
+library(bitops)
+library(RCurl)
+library(XML)
+library(rlist)
+library(dplyr)
+library(ggplot2)
+library(car)
+
+##Set path to read the downloaded web page
+setwd("D:/")
+getwd()
+
+##Read HTML table and covert into dataframe
+htmlData = readHTMLTable("The World's Most Valuable Brands List.html")
+htmlData = as.data.frame(htmlData$the_list)
+
+##Examine the dataframe
+str(htmlData)
+
+##Remove blank column in starting
+htmlData = htmlData[,-1]
+
+####Covert Brand Value , Brand Revenue and Company Advertising to numeric values####
+
+##Capture row indices from Company Advertising represented in Millions 
+index = which(grepl("M",htmlData$'Company Advertising'))
+
+##Remove # from Rank column 
+htmlData$Rank = gsub("#","",htmlData$Rank)
+
+##Remove $ and B from Brand Value
+htmlData$'Brand Value' = gsub("\\$","",htmlData$'Brand Value')
+htmlData$'Brand Value' = gsub("B","",htmlData$'Brand Value')
+
+
+##Remove $ and B from Brand Revenue
+htmlData$'Brand Revenue' = gsub("\\$","",htmlData$'Brand Revenue')
+htmlData$'Brand Revenue' = gsub("B","",htmlData$'Brand Revenue')
+
+##Remove $, M and B from Company Advertising
+htmlData$'Company Advertising' = gsub("\\$","",htmlData$'Company Advertising')
+htmlData$'Company Advertising' = gsub("B","",htmlData$'Company Advertising')
+htmlData$'Company Advertising' = gsub("M","",htmlData$'Company Advertising')
+
+##Convert numeric data into numeric type
+htmlData$Rank = as.numeric(htmlData$Rank)
+htmlData$'Brand Value' = as.numeric(htmlData$'Brand Value')
+htmlData$'Company Advertising' = as.numeric(htmlData$'Company Advertising')
+htmlData$'Brand Revenue' = as.numeric(htmlData$'Brand Revenue')
+  
+##Convert the values represented in Millions to Billions
+htmlData$'Company Advertising'[index]= htmlData$'Company Advertising'[index]/1000
+
+##Remove null values from the data
+htmlData = na.omit(htmlData)
+
+####Technology Plot####
+
+##Filter data where Industry is Technology
+tech <- htmlData%>%filter(Industry=="Technology")
+
+##Use GGPLOT to plot the Technology companies in the forbes list
+p <- ggplot(tech,aes(x=`Company Advertising` , y=`Brand Revenue`, size = `Brand Value`,color=Brand))
+
+q <- p+geom_point()+xlab("Company Advertising in B$")+ylab("Brand Revenue in B$")
+
+r <- q+scale_size(range =c(5,10),breaks =c(30,60,100),name= "Brand Valuations in $(Billions)")
+
+s <- r+geom_text (aes( label=Brand),  hjust=0.5  ,vjust=1)
+
+t <- s+guides(color=FALSE)+theme_light()
+
+u <- t+theme(legend.key= element_rect( fill= "light blue", color = "black"))
+
+TechPlot <- u+scale_x_continuous(breaks=seq(0,6,0.25))+  scale_y_continuous(breaks=seq(0,250,10))
+
+#**********************************************************************************************
+
+####Financial Services Plot####
+
+##Filter data where Industry is Technology
+fin <- htmlData%>%filter(Industry=="Financial Services")
+
+##Use GGPLOT to plot the Financial Services companies in the forbes list
+a <- ggplot(fin,aes(x=`Company Advertising`,y=`Brand Revenue`,size=`Brand Value`,color=Brand))
+
+b <- a+geom_point()+xlab("Company Advertising in B $")+ylab("Brand Revenue in B $")
+
+c <- b+scale_size(range=c(3,8),  breaks=c(7,12,23.4),name="Brand Value $ (Billions)")
+
+d <- c+geom_text(aes( label=Brand),  hjust=0.75 ,vjust=1.7)+guides(color=FALSE)+theme_light()
+
+e <- d+theme(legend.key=element_rect(fill = "light blue", color = "black"))
+
+FinPlot<- e+scale_x_continuous(breaks=seq(0,4,0.25))+  scale_y_continuous(breaks=seq(0,100,10))
+
+#*************************************************************************************************
+
+####Automotive Sector Plot####
+
+##Filter data where Industry is Automotive
+auto <- htmlData%>%filter(Industry=="Automotive")
+
+##Use GGPLOT to plot the Automotive companies in the forbes list
+f <- ggplot(auto,aes(x=`Company Advertising`, y=`Brand Revenue`,size=`Brand Value`,color=Brand))
+
+g <- f+geom_point() + xlab("Company Advertising in Billions of $")+  ylab("Brand Revenue in Billions of $")
+
+h <- g+scale_size(  range=c(3,8),  breaks=c(6.2,20,37.8),name="Brand Value $ (Billions)")
+
+i <- h+geom_text(aes( label=Brand),  hjust=0.75 ,vjust=1.2)+guides(color=FALSE)+theme_light()
+
+j <- i+theme(legend.key=element_rect(fill = "light blue", color = "black"))
+
+AutoPlot<- j+scale_x_continuous(breaks=seq(0,6,0.25))+  scale_y_continuous(breaks=seq(0,200,10))
+
