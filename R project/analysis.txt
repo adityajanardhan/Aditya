@@ -1,0 +1,1 @@
+This folder would mainly consist of older projects that I did a while ago. It mainly has an end to end project in Credit risk modelling and a visualization project
